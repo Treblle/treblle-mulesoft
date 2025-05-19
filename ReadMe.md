@@ -61,6 +61,7 @@ In order to add the custom policy to the organization, we have to build and push
 - Configure the policy with the following values:
   - **API Key**: `API Key`
   - **SDK Token**: `SDK token`
+  - **Mask Keywords**: `Comma-separated list of masking keywords`
 
 
 2. **Save and Apply**:

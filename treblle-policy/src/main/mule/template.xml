@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
     xmlns:http-policy="http://www.mulesoft.org/schema/mule/http-policy"
     xmlns:http="http://www.mulesoft.org/schema/mule/http"
     xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+                        http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/documentation
                         http://www.mulesoft.org/schema/mule/http-policy http://www.mulesoft.org/schema/mule/http-policy/current/mule-http-policy.xsd
-                        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+                        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+                        http://www.mulesoft.org/schema/mule/documentation/current/mule-documentation.xsd">
+
 
     <http-policy:proxy name="{{{policyId}}}-treblle-policy">
         <http-policy:source>
@@ -39,6 +44,7 @@
             <set-variable variableName="elapsedTime"
                 value="#[(vars.endTime - vars.startTimeInMillis)*1000]" />
 
+            <!-- Calculate response payload size -->
             <choice>
                 <when expression="#[attributes.headers['Content-Length'] != null]">
 
@@ -57,12 +63,18 @@
                 </otherwise>
             </choice>
 
-            <logger level="INFO" message="This is it..... Start" />
-            <logger level="INFO" message="#[vars.resPayload]" />
-
 
             <async>
 
+                <!-- Randomly select an endpoint for publishing -->
+                <set-variable variableName="endpoints"
+                    value="#[ [ 'https://rocknrolla.treblle.com', 'https://punisher.treblle.com', 'https://sicario.treblle.com' ] ]" />
+                <set-variable variableName="selectedEP"
+                    value="#[vars.endpoints[dw::Core::randomInt(3)]]" />
+                <set-variable variableName="onlyHost"
+                    value="#[vars.selectedEP replace 'https://' with '']" />
+
+                <!-- Set payload for publishing -->
                 <set-payload
                     value="#[output application/json ---
                         {
@@ -104,8 +116,56 @@
                         }]"
                 />
 
+                <!-- Handling error cases -->
+                <choice>
+                    <when expression="#[vars.statusCode >= 400 and vars.statusCode &lt; 600]">
+                        <ee:transform doc:name="Update Errors Only">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+                                    output application/json
+                                    ---
+                                    payload update {
+                                        case .data.errors -> [
+                                            {
+                                                'type': "API Request failure",
+                                                'source': "onError",
+                                                'message': vars.resPayload
+                                            }
+                                        ]
+                                    }
+                                    ]]></ee:set-payload>
+                            </ee:message>
+                        </ee:transform>
+                    </when>
+                    <otherwise>
+                        <logger level="DEBUG" message="API request failure - #[vars.resPayload]" />
+                    </otherwise>
+                </choice>
 
-                <http:request method="POST" url="http://rocknrolla.treblle.com"
+                <!-- Masking sensitive data -->
+                <set-variable variableName="maskingKeys" value='{{{maskKeywords}}}' />
+                <ee:transform doc:name="Mask Payload Values">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+                            output application/json
+                            fun maskValues(obj, maskKeys) = 
+                                obj mapObject (value, key, index) -> {
+                                    (key): 
+                                        if (maskKeys contains (key as String)) 
+                                            "*****" 
+                                        else if (value is Object) 
+                                            maskValues(value, maskKeys)
+                                        else 
+                                            value
+                                }
+                            ---
+                            maskValues(payload, vars.maskingKeys)
+                            ]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+
+                <http:request method="POST" url="#[vars.selectedEP]"
                     config-ref="HTTP_Request_configuration">
                     <http:headers>
                         #[attributes.headers ++ {
@@ -122,7 +182,7 @@
     </http-policy:proxy>
 
     <http:request-config name="HTTP_Request_configuration">
-        <http:request-connection host="rocknrolla.treblle.com" port="443">
+        <http:request-connection host="#[vars.onlyHost]" port="443">
 
         </http:request-connection>
     </http:request-config>
