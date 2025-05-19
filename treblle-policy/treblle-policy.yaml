@@ -20,4 +20,9 @@ configuration:
     description: Treblle SDK Token
     type: string
     optional: false
-
+  - propertyName: maskKeywords
+    name: Mask Keywords
+    description: Masking keywords for sensitive data
+    type: string
+    optional: true
+    allowMultiple: true
