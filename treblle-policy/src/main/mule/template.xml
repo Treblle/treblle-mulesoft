@@ -28,6 +28,7 @@
             <set-variable variableName="userAgent" value="#[attributes.headers['user-agent']]" />
             <set-variable variableName="reqTime"
                 value="#[vars.startTime as String {format: 'yyyy-MM-dd HH:mm:ss'}]" />
+            <set-variable variableName="internal_id" value="#[app.name]" />
 
             <!-- Proceed with the original request processing -->
             <http-policy:execute-next />
@@ -81,6 +82,7 @@
                             'project_id': '{{{projectID}}}',
                             'api_key': '{{{apiKey}}}',
                             'version' : 0.6,
+                            'internal_id': vars.internal_id,
                             'sdk': 'MuleSoft',
                             'data': {
                                     'server': {
@@ -165,6 +167,7 @@
                     </ee:message>
                 </ee:transform>
 
+                <!-- Send the payload to Treblle -->
                 <http:request method="POST" url="#[vars.selectedEP]"
                     config-ref="HTTP_Request_configuration">
                     <http:headers>
