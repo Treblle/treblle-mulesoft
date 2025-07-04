@@ -26,3 +26,9 @@ configuration:
     type: string
     optional: true
     allowMultiple: true
+  - propertyName: maskPayload
+    name: Mask Payload
+    description: Masking entire payload
+    type: boolean
+    optional: true
+    defaultValue: false

@@ -29,7 +29,6 @@
             <set-variable variableName="reqTime"
                 value="#[vars.startTime as String {format: 'yyyy-MM-dd HH:mm:ss'}]" />
             <set-variable variableName="internal_id" value="#[app.name]" />
-
             <!-- Proceed with the original request processing -->
             <http-policy:execute-next />
 
@@ -81,7 +80,7 @@
                         {
                             'project_id': '{{{projectID}}}',
                             'api_key': '{{{apiKey}}}',
-                            'version' : 0.6,
+                            'version' : 1.7,
                             'internal_id': vars.internal_id,
                             'sdk': 'MuleSoft',
                             'data': {
@@ -131,7 +130,11 @@
                                             {
                                                 'type': "API Request failure",
                                                 'source': "onError",
-                                                'message': vars.resPayload
+                                                'message': if (vars.resPayload is Object and vars.resPayload.error != null) 
+                                                                vars.resPayload.error as String 
+                                                           else 
+                                                                vars.resPayload as String,
+                                                'line': 0,
                                             }
                                         ]
                                     }
@@ -141,6 +144,40 @@
                     </when>
                     <otherwise>
                         <logger level="DEBUG" message="API request failure - #[vars.resPayload]" />
+                    </otherwise>
+                </choice>
+
+                <logger level="INFO" message="Payload x1: #[payload]" />
+
+                <!-- Masking payload -->
+                <choice>
+                    <when expression="{{{maskPayload}}}">
+
+                        <ee:transform doc:name="Mask Request/Response Payloads">
+                            <ee:message>
+                                <ee:set-payload><![CDATA[%dw 2.0
+                                    output application/json
+                                    fun maskAllValues(obj) = 
+                                        obj mapObject (value, key, index) -> 
+                                            (key): 
+                                                if (value is Object) 
+                                                    maskAllValues(value)
+                                                else if (value is Array)
+                                                    value map (item) -> if (item is Object) maskAllValues(item) else "*****"
+                                                else 
+                                                    "*****"
+                                    ---
+                                    payload update {
+                                            case .data.request.body -> maskAllValues(payload.data.request.body)
+                                            case .data.response.body -> maskAllValues(payload.data.response.body)
+                                    }
+                                ]]></ee:set-payload>
+                            </ee:message>
+                        </ee:transform>
+
+                    </when>
+                    <otherwise>
+                        <logger level="DEBUG" message="Skipping masking payload" />
                     </otherwise>
                 </choice>
 
@@ -166,6 +203,10 @@
                         </ee:set-payload>
                     </ee:message>
                 </ee:transform>
+
+                <logger level="INFO" message="Payload: x2 #[payload]" />
+
+
 
                 <!-- Send the payload to Treblle -->
                 <http:request method="POST" url="#[vars.selectedEP]"
