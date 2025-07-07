@@ -28,8 +28,10 @@
             <set-variable variableName="userAgent" value="#[attributes.headers['user-agent']]" />
             <set-variable variableName="reqTime"
                 value="#[vars.startTime as String {format: 'yyyy-MM-dd HH:mm:ss'}]" />
-            <set-variable variableName="internal_id" value="#[app.name]" />
-            <!-- Proceed with the original request processing -->
+            <set-variable variableName="internal_id" value="${apiId}" />
+
+
+           <!-- Proceed with the original request processing -->
             <http-policy:execute-next />
 
             <set-variable variableName="endTime" value="#[dw::util::Timer::currentMilliseconds()]" />
@@ -62,7 +64,6 @@
                         value="#[sizeOf(vars.resPayload as Binary)]" />
                 </otherwise>
             </choice>
-
 
             <async>
 
