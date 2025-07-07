@@ -81,7 +81,7 @@
                         {
                             'project_id': '{{{projectID}}}',
                             'api_key': '{{{apiKey}}}',
-                            'version' : 1.7,
+                            'version' : 0.7,
                             'internal_id': vars.internal_id,
                             'sdk': 'MuleSoft',
                             'data': {
