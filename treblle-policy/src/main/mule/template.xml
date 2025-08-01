@@ -148,7 +148,7 @@
                     </otherwise>
                 </choice>
 
-                <logger level="INFO" message="Payload x1: #[payload]" />
+                <logger level="DEBUG" message="Payload x1: #[payload]" />
 
                 <!-- Masking payload -->
                 <choice>
@@ -205,7 +205,7 @@
                     </ee:message>
                 </ee:transform>
 
-                <logger level="INFO" message="Payload: x2 #[payload]" />
+                <logger level="DEBUG" message="Payload: x2 #[payload]" />
 
 
 
