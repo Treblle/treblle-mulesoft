@@ -147,9 +147,6 @@
                         <logger level="DEBUG" message="API request failure - #[vars.resPayload]" />
                     </otherwise>
                 </choice>
-
-                <logger level="DEBUG" message="Payload x1: #[payload]" />
-
                 <!-- Masking payload -->
                 <choice>
                     <when expression="{{{maskPayload}}}">
@@ -204,10 +201,6 @@
                         </ee:set-payload>
                     </ee:message>
                 </ee:transform>
-
-                <logger level="DEBUG" message="Payload: x2 #[payload]" />
-
-
 
                 <!-- Send the payload to Treblle -->
                 <http:request method="POST" url="#[vars.selectedEP]"
