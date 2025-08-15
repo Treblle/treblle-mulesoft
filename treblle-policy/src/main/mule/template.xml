@@ -26,6 +26,7 @@
             <set-variable variableName="scheme" value="#[attributes.scheme]" />
             <set-variable variableName="method" value="#[attributes.method]" />
             <set-variable variableName="userAgent" value="#[attributes.headers['user-agent']]" />
+            <set-variable variableName="forwardedHost" value="#[attributes.headers['x-forwarded-host']]" />
             <set-variable variableName="reqTime"
                 value="#[vars.startTime as String {format: 'yyyy-MM-dd HH:mm:ss'}]" />
             <set-variable variableName="internal_id" value="${apiId}" />
@@ -100,7 +101,7 @@
                                     'request': {
                                         'timestamp': vars.reqTime,
                                         'ip': vars.remoteAdd,
-                                        'url': 'https://cloudhub.io' ++ vars.reqURL,
+                                        'url': 'https://' ++ vars.forwardedHost,
                                         'user_agent': vars.userAgent,
                                         'method': vars.method,
                                         'headers': vars.reqHeaders,
