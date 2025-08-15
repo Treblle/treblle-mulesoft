@@ -156,19 +156,23 @@
                             <ee:message>
                                 <ee:set-payload><![CDATA[%dw 2.0
                                     output application/json
-                                    fun maskAllValues(obj) = 
-                                        obj mapObject (value, key, index) -> 
-                                            (key): 
-                                                if (value is Object) 
-                                                    maskAllValues(value)
-                                                else if (value is Array)
-                                                    value map (item) -> if (item is Object) maskAllValues(item) else "*****"
-                                                else 
-                                                    "*****"
+                                    fun maskAllValues(data) =
+                                        if (data is Object)
+                                            data mapObject ((value, key) -> (key): maskAllValues(value))
+                                        else if (data is Array)
+                                            data map ((item, index) -> maskAllValues(item))
+                                        else if (data is String and data != null and data != "")
+                                            "*****"
+                                        else if (data is Number)
+                                            "*****"
+                                        else if (data is Boolean)
+                                            "*****"
+                                        else
+                                            data
                                     ---
                                     payload update {
-                                            case .data.request.body -> maskAllValues(payload.data.request.body)
-                                            case .data.response.body -> maskAllValues(payload.data.response.body)
+                                            case .data.request.body -> if (payload.data.request.body != null) maskAllValues(payload.data.request.body) else payload.data.request.body
+                                            case .data.response.body -> if (payload.data.response.body != null) maskAllValues(payload.data.response.body) else payload.data.response.body
                                     }
                                 ]]></ee:set-payload>
                             </ee:message>
@@ -187,15 +191,24 @@
                         <ee:set-payload><![CDATA[%dw 2.0
                             output application/json
                             fun maskValues(obj, maskKeys) = 
-                                obj mapObject (value, key, index) -> {
-                                    (key): 
-                                        if (maskKeys contains (key as String)) 
-                                            "*****" 
-                                        else if (value is Object) 
-                                            maskValues(value, maskKeys)
-                                        else 
-                                            value
-                                }
+                                if (obj is Object and obj != null)
+                                    obj mapObject (value, key, index) -> {
+                                        (key): 
+                                            if (maskKeys != null and maskKeys is Array and (maskKeys contains (key as String))) 
+                                                "*****" 
+                                            else if (maskKeys != null and maskKeys is String and ((maskKeys splitBy ",") contains (key as String)))
+                                                "*****"
+                                            else if (value is Object and value != null) 
+                                                maskValues(value, maskKeys)
+                                            else if (value is Array and value != null)
+                                                value map ((item, index) -> maskValues(item, maskKeys))
+                                            else 
+                                                value
+                                    }
+                                else if (obj is Array and obj != null)
+                                    obj map ((item, index) -> maskValues(item, maskKeys))
+                                else
+                                    obj
                             ---
                             maskValues(payload, vars.maskingKeys)
                             ]]>
