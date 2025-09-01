@@ -17,8 +17,7 @@
 
             <!-- Store the incoming request payload to restore it after the API call -->
             <set-variable variableName="startTime" value="#[now()]" />
-            <set-variable variableName="startTimeInMillis"
-                value="#[dw::util::Timer::currentMilliseconds()]" />
+            <set-variable variableName="startTimeInMillis" value="#[dw::util::Timer::currentMilliseconds()]" />
             <set-variable variableName="reqPayload" value="#[payload]" />
             <set-variable variableName="reqHeaders" value="#[attributes.headers]" />
             <set-variable variableName="reqURL" value="#[attributes.requestPath]" />
@@ -46,25 +45,27 @@
             <set-variable variableName="statusCode" value="#[attributes.statusCode]" />
             <set-variable variableName="elapsedTime"
                 value="#[(vars.endTime - vars.startTimeInMillis)*1000]" />
+            
 
-            <!-- Calculate response payload size -->
             <choice>
+                <!-- Case 1: Content-Length header is present -->
                 <when expression="#[attributes.headers['Content-Length'] != null]">
-
-                    <set-variable variableName="payloadSize"
-                        value="#[attributes.headers['Content-Length']]" />
+                    <set-variable variableName="payloadSize" value="#[attributes.headers['Content-Length']]" />
                 </when>
-                <when expression="#[vars.resPayload is Object]">
-
-                    <set-variable variableName="payloadSize"
-                        value="#[sizeOf(write(vars.resPayload, 'application/json') as Binary)]" />
+                <!-- Case 2: Null payload -->
+                <when expression="#[vars.resPayload == null]">
+                    <set-variable variableName="payloadSize" value="0" />
                 </when>
+                <!-- Case 3: Binary payload -->
+                <when expression="#[vars.resPayload is Binary]">
+                    <set-variable variableName="payloadSize" value="#[sizeOf(vars.resPayload as Binary)]" />
+                </when>
+                <!-- Case 4: All other types (String, Array, Object, Number, Boolean, DateTime) -->
                 <otherwise>
-
-                    <set-variable variableName="payloadSize"
-                        value="#[sizeOf(vars.resPayload as Binary)]" />
+                    <set-variable variableName="payloadSize" value="#[sizeOf(write(vars.resPayload, 'application/json') as Binary)]" />
                 </otherwise>
             </choice>
+
 
             <async>
 
